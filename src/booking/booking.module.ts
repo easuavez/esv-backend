@@ -17,10 +17,11 @@ import { ClientModule } from '../client/client.module';
 import { IncomeModule } from '../income/income.module';
 import { PackageModule } from '../package/package.module';
 import { ServiceModule } from 'src/service/service.module';
+import { BookingBlockNumbersUsed } from './model/booking-block-numbers-used.entity';
 
 @Module({
   imports: [
-    FireormModule.forFeature([Booking]),
+    FireormModule.forFeature([Booking, BookingBlockNumbersUsed]),
     forwardRef(() => QueueModule),
     forwardRef(() => CollaboratorModule),
     forwardRef(() => CommerceModule),

@@ -84,7 +84,7 @@ export class BookingService {
       throw new HttpException(`Limite de la fila ${queue.id} - ${queue.name} (${queue.limit}) alcanzado para la fecha ${newDateFormatted}`, HttpStatus.INTERNAL_SERVER_ERROR);
     } else {
       let bookingNumber;
-      if (block && Object.keys(block).length > 0 && queue.type !== QueueType.SELECT_SERVICE) {
+      if (block && Object.keys(block).length > 0) { //&& queue.type !== QueueType.SELECT_SERVICE) {
         bookingNumber = block.number;
         let blockLimit = 0;
         const alreadyBooked = await this.getPendingBookingsByNumberAndQueueAndDate(queueId, date, bookingNumber);
@@ -890,7 +890,7 @@ export class BookingService {
           let booking = bookings[i];
           limiter.schedule(async () => {
             try {
-              booking.status = BookingStatus.RESERVE_CANCELLED;
+              booking.status = BookingStatus.CANCELLED;
               booking.cancelledAt = new Date();
               booking.cancelled = true;
               await this.update('ett', booking);
