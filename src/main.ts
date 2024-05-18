@@ -2,6 +2,8 @@ import { ValidationPipe, VersioningType } from '@nestjs/common';
 import * as bodyParser from 'body-parser';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { RequestInterceptor } from './shared/interceptors/request.interceptor';
+import { TransformInterceptor } from './shared/interceptors/response.interceptor';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
@@ -72,6 +74,7 @@ async function bootstrap(): Promise<void> {
     type: VersioningType.URI,
   });
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
+  app.useGlobalInterceptors(new RequestInterceptor(), new TransformInterceptor())
   const server = await app.listen(process.env.PORT || 3000);
   server.setTimeout(60000);
 }
