@@ -37,6 +37,20 @@ export class AdministratorService {
     return administrator;
   }
 
+  public async getAdministratorsByCommerce(businessId: string, commerceId: string): Promise<Administrator[]> {
+    const administratorsCommerce = await this.administratorRepository
+      .whereEqualTo('businessId', businessId)
+      .whereArrayContains('commercesId', commerceId)
+      .whereEqualTo('active', true)
+      .find();
+    const administratorsBusiness = await this.administratorRepository
+      .whereEqualTo('businessId', businessId)
+      .whereEqualTo('active', true)
+      .find();
+    const administratorsBusinessFiltered = administratorsBusiness.filter(administrator => !administrator.commercesId || administrator.commercesId.length === 0);
+    return [...administratorsBusinessFiltered, ...administratorsCommerce];
+  }
+
   public async getMasterAdministratorByEmail(email: string): Promise<Administrator> {
     const administrators = await this.administratorRepository
       .whereEqualTo('email', email)
@@ -104,8 +118,12 @@ export class AdministratorService {
       }
       if (administrator.lastPasswordChanged) {
         let days = Math.abs(new Date().getTime() - administrator.lastPasswordChanged.getTime()) / (1000 * 60 * 60 * 24);
-        if (days >= 1) {
+        if (days < 1) {
           throw new HttpException('Limite de cambio de password alcanzado', HttpStatus.INTERNAL_SERVER_ERROR);
+        } else {
+          administrator.lastPasswordChanged = new Date();
+          administrator = await this.administratorRepository.update(administrator);
+          return administrator;
         }
       } else {
         administrator.lastPasswordChanged = new Date();

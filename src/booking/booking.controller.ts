@@ -86,9 +86,8 @@ export class BookingController {
 
     @UseGuards(SimpleGuard)
     @Post('/confirm')
-    public async confirmNotifyBookings(@Body() body: any): Promise<any> {
-        const { daysBefore } = body;
-        return this.bookingService.confirmNotifyBookings(daysBefore);
+    public async confirmNotifyBookings(): Promise<any> {
+        return this.bookingService.confirmNotifyBookings();
     }
 
     @UseGuards(SimpleGuard)
@@ -146,5 +145,12 @@ export class BookingController {
         const { id } = params;
         const { date, block } = body;
         return this.bookingService.editBookingDateAndBlock(user, id, date, block);
+    }
+
+    @UseGuards(AuthGuard)
+    @Patch('/accept-terms/:id/:code')
+    public async acceptBookingTermsAndConditions(@User() user, @Param() params: any): Promise<Booking> {
+        const { id, code } = params;
+        return this.bookingService.acceptBookingTermsAndConditions(user, id, code);
     }
 }

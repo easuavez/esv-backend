@@ -194,5 +194,29 @@
   {
     "name": "user-service-conditions",
     "type": "PRODUCT"
+  },
+  {
+    "name": "attention-first-form",
+    "type": "PRODUCT"
+  },
+  {
+    "name": "attention-pre-form",
+    "type": "PRODUCT"
+  },
+  {
+    "name": "email-bookings-terms-conditions",
+    "type": "EMAIL"
+  },
+  {
+    "name": "attention-user-health-agreement",
+    "type": "USER"
+  },
+  {
+    "name": "email-post-attention",
+    "type": "EMAIL"
+  },
+  {
+    "name": "stock-product-recharge",
+    "type": "MESSAGE"
   }
 ]

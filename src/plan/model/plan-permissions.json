@@ -39,6 +39,9 @@
     "business.main-menu.patients": true,
     "business.main-menu.marketing": true,
     "business.main-menu.outcome-types-admin": true,
+    "business.main-menu.forms-admin": true,
+    "business.main-menu.company-admin": true,
+    "business.main-menu.patient-history-item-admin": true,
 
     "businesses.admin.add": false,
     "businesses.admin.update": false,
@@ -49,6 +52,8 @@
 
     "client.notify.email": false,
     "client.notify.whatsapp": false,
+    "client.admin.edit": true,
+    "client.admin.add": true,
 
     "collaborator.attention.attend": true,
     "collaborator.attention.transfer": true,
@@ -143,6 +148,9 @@
     "dashboard.attention-origin-avg.view": true,
     "dashboard.attention-client-contact.view": true,
     "dashboard.attention-days-since-clients.view": true,
+    "dashboard.bookings-management.view": true,
+    "dashboard.reports.bookings-management": true,
+    "dashboard.client-data-management.view": true,
 
     "executive.admin.view": true,
     "executive.admin.download": true,
@@ -247,6 +255,10 @@
     "document-commerce.admin.add": true,
     "document-commerce.admin.edit": true,
 
+    "document-client.admin.view": true,
+    "document-client.admin.add": true,
+    "document-client.admin.edit": true,
+
     "financial.resume.view": true,
     "financial.incomes.view": true,
     "financial.outcomes.view": true,
@@ -272,7 +284,31 @@
     "patient.history.add": true,
     "patient.history.download": true,
     "patient.history.control-edit": true,
-    "patient.history.control-update": true
+    "patient.history.control-update": true,
+
+    "patient-history-item.admin.view": true,
+    "patient-history-item.admin.limit": 50,
+    "patient-history-item.admin.unavailable": true,
+    "patient-history-item.admin.update": true,
+    "patient-history-item.admin.edit": true,
+    "patient-history-item.admin.read": true,
+    "patient-history-item.admin.add": true,
+
+    "companies.admin.view": true,
+    "companies.admin.limit": 10,
+    "companies.admin.unavailable": true,
+    "companies.admin.update": true,
+    "companies.admin.edit": true,
+    "companies.admin.read": true,
+    "companies.admin.add": true,
+
+    "forms.admin.add": true,
+    "forms.admin.read": true,
+    "forms.admin.view": true,
+    "forms.admin.unavailable": true,
+    "forms.admin.edit": true,
+    "forms.admin.update": true,
+    "forms.admin.limit": 5
   },
   "ONLY_SURVEYS": {
     "activations.admin.desactivate": false,
@@ -309,6 +345,9 @@
     "business.main-menu.product-admin": false,
     "business.main-menu.product-stock": false,
     "business.main-menu.outcome-types-admin": true,
+    "business.main-menu.forms-admin": true,
+    "business.main-menu.company-admin": false,
+    "business.main-menu.patient-history-item-admin": false,
 
     "businesses.admin.add": false,
     "businesses.admin.update": false,
@@ -319,6 +358,8 @@
 
     "client.notify.email": false,
     "client.notify.whatsapp": false,
+    "client.admin.edit": false,
+    "client.admin.add": false,
 
     "collaborator.attention.attend": false,
     "collaborator.attention.skip": false,
@@ -416,6 +457,9 @@
     "dashboard.attention-client-contact.view": false,
     "dashboard.attention-days-since-clients.view": false,
     "dashboard.collection-details.view": false,
+    "dashboard.bookings-management.view": false,
+    "dashboard.reports.bookings-management": false,
+    "dashboard.client-data-management.view": false,
 
     "executive.admin.view": true,
     "executive.admin.download": true,
@@ -520,6 +564,10 @@
     "document-commerce.admin.add": false,
     "document-commerce.admin.edit": false,
 
+    "document-client.admin.view": false,
+    "document-client.admin.add": false,
+    "document-client.admin.edit": false,
+
     "financial.resume.view": false,
     "financial.incomes.view": false,
     "financial.outcomes.view": false,
@@ -545,7 +593,31 @@
     "patient.history.add": false,
     "patient.history.download": false,
     "patient.history.control-edit": false,
-    "patient.history.control-update": false
+    "patient.history.control-update": false,
+
+    "patient-history-item.admin.view": false,
+    "patient-history-item.admin.limit": 50,
+    "patient-history-item.admin.unavailable": false,
+    "patient-history-item.admin.update": false,
+    "patient-history-item.admin.edit": false,
+    "patient-history-item.admin.read": false,
+    "patient-history-item.admin.add": false,
+
+    "companies.admin.view": false,
+    "companies.admin.limit": 10,
+    "companies.admin.unavailable": false,
+    "companies.admin.update": false,
+    "companies.admin.edit": false,
+    "companies.admin.read": false,
+    "companies.admin.add": false,
+
+    "forms.admin.add": false,
+    "forms.admin.read": false,
+    "forms.admin.view": false,
+    "forms.admin.unavailable": false,
+    "forms.admin.edit": false,
+    "forms.admin.update": false,
+    "forms.admin.limit": 5
   },
   "QUEUES_BOOKING": {
     "activations.admin.desactivate": false,
@@ -582,6 +654,9 @@
     "business.main-menu.product-admin": true,
     "business.main-menu.product-stock": true,
     "business.main-menu.outcome-types-admin": true,
+    "business.main-menu.forms-admin": true,
+    "business.main-menu.company-admin": true,
+    "business.main-menu.patient-history-item-admin": true,
 
     "businesses.admin.add": false,
     "businesses.admin.update": false,
@@ -592,6 +667,8 @@
 
     "client.notify.email": false,
     "client.notify.whatsapp": false,
+    "client.admin.edit": true,
+    "client.admin.add": true,
 
     "collaborator.attention.attend": true,
     "collaborator.attention.transfer": true,
@@ -687,6 +764,9 @@
     "dashboard.attention-client-contact.view": true,
     "dashboard.attention-days-since-clients.view": true,
     "dashboard.collection-details.view": true,
+    "dashboard.bookings-management.view": true,
+    "dashboard.reports.bookings-management": true,
+    "dashboard.client-data-management.view": true,
 
     "executive.admin.view": true,
     "executive.admin.download": true,
@@ -791,6 +871,10 @@
     "document-commerce.admin.add": true,
     "document-commerce.admin.edit": true,
 
+    "document-client.admin.view": true,
+    "document-client.admin.add": true,
+    "document-client.admin.edit": true,
+
     "financial.resume.view": true,
     "financial.incomes.view": true,
     "financial.outcomes.view": true,
@@ -818,12 +902,28 @@
     "patient.history.control-edit": true,
     "patient.history.control-update": true,
 
+    "patient-history-item.admin.view": true,
+    "patient-history-item.admin.limit": 50,
+    "patient-history-item.admin.unavailable": true,
+    "patient-history-item.admin.update": true,
+    "patient-history-item.admin.edit": true,
+    "patient-history-item.admin.read": true,
+    "patient-history-item.admin.add": true,
+
     "companies.admin.view": true,
     "companies.admin.limit": 10,
     "companies.admin.unavailable": true,
     "companies.admin.update": true,
     "companies.admin.edit": true,
     "companies.admin.read": true,
-    "companies.admin.add": true
+    "companies.admin.add": true,
+
+    "forms.admin.add": true,
+    "forms.admin.read": true,
+    "forms.admin.view": true,
+    "forms.admin.unavailable": true,
+    "forms.admin.edit": true,
+    "forms.admin.update": true,
+    "forms.admin.limit": 5
   }
 }

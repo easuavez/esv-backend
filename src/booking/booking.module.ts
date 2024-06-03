@@ -18,6 +18,7 @@ import { IncomeModule } from '../income/income.module';
 import { PackageModule } from '../package/package.module';
 import { ServiceModule } from 'src/service/service.module';
 import { BookingBlockNumbersUsed } from './model/booking-block-numbers-used.entity';
+import { DocumentsModule } from '../documents/documents.module';
 
 @Module({
   imports: [
@@ -36,7 +37,8 @@ import { BookingBlockNumbersUsed } from './model/booking-block-numbers-used.enti
     forwardRef(() => PackageModule),
     forwardRef(() => UserModule),
     forwardRef(() => ServiceModule),
-    forwardRef(() => PackageModule)
+    forwardRef(() => PackageModule),
+    forwardRef(() => DocumentsModule)
   ],
   providers: [
     BookingService,

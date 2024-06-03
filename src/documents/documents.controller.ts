@@ -9,7 +9,8 @@ import { UploadDocumentsInputsDto } from './dto/upload-documents.inputs.dto';
 import { AuthGuard } from '../auth/auth.guard';
 import { Document, DocumentOption } from './model/document.entity';
 import { User } from '../auth/user.decorator';
-import { AnyFilesInterceptor, FileFieldsInterceptor } from '@nestjs/platform-express';
+import { AnyFilesInterceptor } from '@nestjs/platform-express';
+import { DocumentType } from './model/document.enum';
 
 @Controller('documents')
 export class DocumentsController {
@@ -31,6 +32,13 @@ export class DocumentsController {
   }
 
   @UseGuards(AuthGuard)
+  @Get('/commerceId/:commerceId/client/:clientId')
+  public async getDocumentsByCommerceIdAndClient(@Param() params: any): Promise<Document[]> {
+      const { commerceId, clientId } = params;
+      return this.documentsService.getDocumentsByCommerceIdAndClient(commerceId, clientId, DocumentType.CLIENT);
+  }
+
+  @UseGuards(AuthGuard)
   @Get('/commerceId/:commerceId/option/:option')
   public async getDocumentsByOption(@Param() params: any): Promise<Document> {
       const { commerceId, option } = params;
@@ -42,9 +50,19 @@ export class DocumentsController {
   @Post()
   public uploadDocument(@User() user, @UploadedFiles() files, @Body() body: UploadDocumentsInputsDto): Promise<any> {
     const {
-      commerceId, name, format,
+      commerceId, name, format, reportType,
     } = body;
-    return this.documentsService.uploadDocument(user, commerceId, name, commerceId, format, files);
+    return this.documentsService.uploadDocument(user, commerceId, reportType, name, format, files);
+  }
+
+  @UseGuards(AuthGuard)
+  @UseInterceptors(AnyFilesInterceptor())
+  @Post('/client')
+  public uploadClientDocument(@User() user, @UploadedFiles() files, @Body() body: UploadDocumentsInputsDto): Promise<any> {
+    const {
+      commerceId, clientId, name, format, reportType, documentMetadata
+    } = body;
+    return this.documentsService.uploadClientDocument(user, commerceId, clientId, reportType, name, format, files, documentMetadata);
   }
 
   @UseGuards(AuthGuard)
@@ -56,6 +74,14 @@ export class DocumentsController {
   }
 
   @UseGuards(AuthGuard)
+  @Get('client/:documentKey/:reportType/:name')
+  public getDocumentById(@Param() params: GetDocumentsParamsDto, @Res() response): Readable {
+    const { documentKey, reportType, name } = params;
+    const readable = this.documentsService.getClientDocument(documentKey, reportType, name);
+    return readable.pipe(response);
+  }
+
+  @UseGuards(AuthGuard)
   @Get('list/:reportType/:documentKey')
   public getDocumentList(@Param() params: GetDocumentsParamsDto): Promise<ObjectList> {
     const { reportType, documentKey } = params;
@@ -63,10 +89,18 @@ export class DocumentsController {
   }
 
   @UseGuards(AuthGuard)
-  @Patch('/:id')
-  public async updateDocument(@User() user, @Param() params: any, @Body() body: Document): Promise<Document> {
+  @Patch('/:id/active')
+  public async activeDocument(@User() user, @Param() params: any, @Body() body: Document): Promise<Document> {
     const { id } = params;
     const { active } = body;
-    return this.documentsService.updateDocument(user, id, active);
+    return this.documentsService.activeDocument(user, id, active);
+  }
+
+  @UseGuards(AuthGuard)
+  @Patch('/:id/available')
+  public async availableDocument(@User() user, @Param() params: any, @Body() body: any): Promise<Document> {
+    const { id } = params;
+    const { available } = body;
+    return this.documentsService.availableDocument(user, id, available);
   }
 }

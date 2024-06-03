@@ -4,7 +4,7 @@ import { InjectRepository } from 'nestjs-fireorm';
 import { QueueService } from '../queue/queue.service';
 import { CollaboratorService } from '../collaborator/collaborator.service';
 import { AttentionStatus } from './model/attention-status.enum';
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { NotificationService } from '../notification/notification.service';
 import { UserService } from '../user/user.service';
 import { ModuleService } from '../module/module.service';
@@ -33,6 +33,13 @@ import { IncomeService } from 'src/income/income.service';
 import { IncomeStatus } from 'src/income/model/income-status.enum';
 import { IncomeType } from 'src/income/model/income-type.enum';
 import * as NOTIFICATIONS from './notifications/notifications.js';
+import { DocumentsService } from 'src/documents/documents.service';
+import { Attachment } from 'src/notification/model/email-input.dto';
+import { Commerce } from 'src/commerce/model/commerce.entity';
+import { DateModel } from '../shared/utils/date.model';
+import Bottleneck from "bottleneck";
+import { CommerceKeyNameDetailsDto } from 'src/commerce/dto/commerce-keyname-details.dto';
+import { FeatureToggleDetailsDto } from '../feature-toggle/dto/feature-toggle-details.dto';
 
 @Injectable()
 export class AttentionService {
@@ -52,6 +59,7 @@ export class AttentionService {
     private commerceService: CommerceService,
     private packageService: PackageService,
     private incomeService: IncomeService,
+    private documentsService: DocumentsService
   ) { }
 
   public async getAttentionById(id: string): Promise<Attention> {
@@ -62,7 +70,6 @@ export class AttentionService {
     try {
       const attention = await this.getAttentionById(id);
       let attentionDetailsDto: AttentionDetailsDto = new AttentionDetailsDto();
-
       attentionDetailsDto.id = attention.id;
       attentionDetailsDto.commerceId = attention.commerceId;
       attentionDetailsDto.collaboratorId = attention.collaboratorId;
@@ -89,6 +96,7 @@ export class AttentionService {
       attentionDetailsDto.servicesId = attention.servicesId;
       attentionDetailsDto.servicesDetails = attention.servicesDetails;
       attentionDetailsDto.clientId = attention.clientId;
+      attentionDetailsDto.surveyPostAttentionDateScheduled = attention.surveyPostAttentionDateScheduled;
       if (attention.queueId) {
           attentionDetailsDto.queue = await this.queueService.getQueueById(attention.queueId);
           attentionDetailsDto.commerce = await this.commerceService.getCommerceById(attentionDetailsDto.queue.commerceId);
@@ -141,6 +149,7 @@ export class AttentionService {
       attentionDetailsDto.servicesId = attention.servicesId;
       attentionDetailsDto.servicesDetails = attention.servicesDetails;
       attentionDetailsDto.clientId = attention.clientId;
+      attentionDetailsDto.surveyPostAttentionDateScheduled = attention.surveyPostAttentionDateScheduled;
       if (attention.userId !== undefined) {
           attentionDetailsDto.user = await this.userService.getUserById(attention.userId);
       }
@@ -282,6 +291,15 @@ export class AttentionService {
       .find();
   }
 
+  public async getPostAttentionScheduledSurveys(date: string, limit: number = 100): Promise<Attention[]> {
+    return await this.attentionRepository
+      .whereEqualTo('surveyPostAttentionDateScheduled', date)
+      .whereIn('status', [AttentionStatus.TERMINATED])
+      .whereEqualTo('notificationSurveySent', false)
+      .limit(limit)
+      .find();
+  }
+
   public async createAttention(
       queueId: string,
       collaboratorId?: string,
@@ -294,11 +312,17 @@ export class AttentionService {
       bookingId?: string,
       servicesId?: string[],
       servicesDetails?: object[],
-      clientId?: string
+      clientId?: string,
+      termsConditionsToAcceptCode?: string,
+      termsConditionsAcceptedCode?: string,
+      termsConditionsToAcceptedAt?: Date
     ): Promise<Attention> {
       try {
         let attentionCreated;
         let queue = await this.queueService.getQueueById(queueId);
+        if (userIn && (userIn.acceptTermsAndConditions === false || !userIn.acceptTermsAndConditions)) {
+          throw new HttpException(`No ha aceptado los terminos y condiciones`, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
         const newUser = userIn ? userIn : new User();
         const user = await this.userService.createUser(
           newUser.name, newUser.phone, newUser.email, queue.commerceId, queue.id, newUser.lastName, newUser.idNumber,
@@ -309,7 +333,9 @@ export class AttentionService {
         const onlySurvey = await this.featureToggleService.getFeatureToggleByNameAndCommerceId(queue.commerceId, 'only-survey');
         if (type && type === AttentionType.NODEVICE) {
           if (block && block.number) {
-            attentionCreated = await this.attentionReserveBuilder.create(queue, collaboratorId, type, channel, userId, block, date, paymentConfirmationData, bookingId, servicesId, servicesDetails, clientId);
+            attentionCreated = await this.attentionReserveBuilder.create(queue, collaboratorId, type, channel, userId, block,
+              date, paymentConfirmationData, bookingId, servicesId, servicesDetails, clientId, termsConditionsToAcceptCode,
+              termsConditionsAcceptedCode, termsConditionsToAcceptedAt);
           } else {
             attentionCreated = await this.attentionNoDeviceBuilder.create(queue, collaboratorId, channel, userId, date, servicesId, servicesDetails, clientId);
           }
@@ -325,7 +351,9 @@ export class AttentionService {
             attentionCreated = await this.attentionDefaultBuilder.create(queue, collaboratorId, channel, userId, date, servicesId, servicesDetails, clientId);
           }
         } else if (block && block.number) {
-          attentionCreated = await this.attentionReserveBuilder.create(queue, collaboratorId, AttentionType.STANDARD, channel, userId, block, date, paymentConfirmationData, bookingId, servicesId, servicesDetails, clientId);
+          attentionCreated = await this.attentionReserveBuilder.create(queue, collaboratorId, AttentionType.STANDARD, channel, userId, block,
+            date, paymentConfirmationData, bookingId, servicesId, servicesDetails, clientId, termsConditionsToAcceptCode,
+            termsConditionsAcceptedCode, termsConditionsToAcceptedAt);
         } else {
           attentionCreated = await this.attentionDefaultBuilder.create(queue, collaboratorId, channel, userId, date, servicesId, servicesDetails, clientId);
         }
@@ -460,8 +488,17 @@ export class AttentionService {
         const diff = attention.endAt.getTime() - dateAt.getTime();
         attention.duration = diff/(1000*60);
       }
-      await this.csatEmail(attention.id);
-      await this.csatWhatsapp(attention.id);
+      const attentionCommerce = await this.commerceService.getCommerceDetails(attention.commerceId);
+      const attentionDetails = await this.getAttentionDetails(attentionId);
+      if (attentionCommerce.serviceInfo && attentionCommerce.serviceInfo.surveyPostAttentionDaysAfter) {
+        const daysToAdd = attentionCommerce.serviceInfo.surveyPostAttentionDaysAfter || 0;
+        const surveyPostAttentionDateScheduled = new DateModel().addDays(+daysToAdd).toString();
+        attention.surveyPostAttentionDateScheduled = surveyPostAttentionDateScheduled;
+      } else {
+        this.csatEmail(attentionDetails, attentionCommerce);
+        this.csatWhatsapp(attentionDetails, attentionCommerce);
+      }
+      this.postAttentionEmail(attentionDetails, attentionCommerce);
       return this.update(user, attention);
     }
     return attention;
@@ -486,7 +523,7 @@ export class AttentionService {
     return attention;
   }
 
-  featureToggleIsActive(featureToggle: FeatureToggle[], name: string): boolean {
+  featureToggleIsActive(featureToggle: FeatureToggleDetailsDto[], name: string): boolean {
     const feature = featureToggle.find(elem => elem.name === name);
     if (feature) {
       return feature.active;
@@ -621,9 +658,8 @@ export class AttentionService {
     return notified;
   }
 
-  public async csatEmail(attentionId: string): Promise<Attention[]> {
-    const attention = await this.getAttentionDetails(attentionId);
-    const featureToggle = await this.featureToggleService.getFeatureToggleByCommerceAndType(attention.commerceId, FeatureToggleName.EMAIL);
+  public async csatEmail(attention: AttentionDetailsDto, attentionCommerce: CommerceKeyNameDetailsDto): Promise<Attention[]> {
+    const featureToggle = attentionCommerce.features;
     let toNotify = [];
     if(this.featureToggleIsActive(featureToggle, 'email-csat')){
       toNotify.push(attention.number);
@@ -646,9 +682,64 @@ export class AttentionService {
     return notified;
   }
 
-  public async csatWhatsapp(attentionId: string): Promise<Attention[]> {
-    const attention = await this.getAttentionDetails(attentionId);
-    const featureToggle = await this.featureToggleService.getFeatureToggleByCommerceAndType(attention.commerceId, FeatureToggleName.WHATSAPP);
+  public async postAttentionEmail(attention: AttentionDetailsDto, attentionCommerce: CommerceKeyNameDetailsDto): Promise<Attention[]> {
+    const featureToggle = attentionCommerce.features;
+    let toNotify = [];
+    if(this.featureToggleIsActive(featureToggle, 'email-post-attention')){
+      toNotify.push(attention);
+    }
+    const notified = [];
+    const commerceLanguage = attentionCommerce.localeInfo.language;
+    toNotify.forEach(async (attention) => {
+      if (attention !== undefined) {
+        if (attention.user.email) {
+          let documentAttachament: Attachment;
+          const document = await this.documentsService.getDocument(`${attentionCommerce.id}.pdf`, 'post_attention');
+          if (document) {
+            const chunks = [];
+            document.on("data", function (chunk) {
+              chunks.push(chunk);
+            });
+            let content;
+            await document.on("end", async () => {
+              content = Buffer.concat(chunks);
+              documentAttachament = {
+                content,
+                filename: `post_attention-${attentionCommerce.name}.pdf`,
+                encoding: 'base64'
+              }
+              const from = process.env.EMAIL_SOURCE;
+              const to = [attention.user.email];
+              const emailData = NOTIFICATIONS.getPostAttetionCommerce(commerceLanguage, attentionCommerce);
+              const subject = emailData.subject;
+              const htmlTemplate = emailData.html;
+              const attachments = [documentAttachament];
+              const logo = `${process.env.BACKEND_URL}/${attentionCommerce.logo}`;
+              const commerce = attentionCommerce.name;
+              const html = htmlTemplate
+                .replaceAll('{{logo}}', logo)
+                .replaceAll('{{commerce}}', commerce);
+              await this.notificationService.createAttentionRawEmailNotification(
+                NotificationType.POST_ATTENTION,
+                attention.id,
+                attentionCommerce.id,
+                from,
+                to,
+                subject,
+                attachments,
+                html
+              );
+              notified.push(attention);
+            });
+          }
+        }
+      }
+    });
+    return notified;
+  }
+
+  public async csatWhatsapp(attention: AttentionDetailsDto, attentionCommerce: CommerceKeyNameDetailsDto): Promise<Attention[]> {
+    const featureToggle = attentionCommerce.features;
     let toNotify = [];
     if(this.featureToggleIsActive(featureToggle, 'whatsapp-csat')){
       toNotify.push(attention.number);
@@ -798,7 +889,7 @@ export class AttentionService {
           const packageId = pack && pack.id ? pack.id : undefined;
           attention.paidAt = new Date();
           attention.paid = true;
-          if (confirmationData === undefined || confirmationData.paid === false || !confirmationData.paymentDate) {
+          if (confirmationData === undefined || confirmationData.paid === false || !confirmationData.paymentDate || confirmationData.paymentAmount === undefined || confirmationData.paymentAmount < 0) {
             throw new HttpException(`Datos insuficientes para confirmar el pago de la atención`, HttpStatus.INTERNAL_SERVER_ERROR);
           }
           confirmationData.user = user ? user : 'ett';
@@ -874,6 +965,45 @@ export class AttentionService {
       throw new HttpException(`Hubo un problema al cancelar la atención: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
     }
     return attention;
+  }
+
+  public async surveyPostAttention(date: string): Promise<any> {
+    const limiter = new Bottleneck({
+      minTime: 1000,
+      maxConcurrent: 10
+    });
+    const responses = [];
+    const errors = [];
+    let toProcess = 0;
+    try {
+      const today = date || new DateModel().toString();
+      const attentions = await this.getPostAttentionScheduledSurveys(today, 25);
+      toProcess = attentions.length;
+      if (attentions && attentions.length > 0) {
+        for(let i = 0; i < attentions.length; i++) {
+          let attention = attentions[i];
+          limiter.schedule(async () => {
+            try {
+              const attentionDetails = await this.getAttentionDetails(attention.id);
+              const commerce = attentionDetails.commerce;
+              this.csatEmail(attentionDetails, commerce);
+              this.csatWhatsapp(attentionDetails, commerce);
+              attention.notificationSurveySent = true;
+              attention = await this.update('ett', attention);
+            } catch (error) {
+              errors.push(error);
+            }
+            responses.push(attention);
+          });
+        }
+        await limiter.stop({ dropWaitingJobs: false });
+      }
+      const response = { toProcess, processed: responses.length, errors: errors.length };
+      Logger.log(`surveyPostAttention response: ${JSON.stringify(response)}`);
+      return response;
+    } catch (error) {
+      throw new HttpException(`Hubo un poblema al enviar las encuestas: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 
 }

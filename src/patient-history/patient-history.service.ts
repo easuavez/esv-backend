@@ -1,4 +1,4 @@
-import { ConsultationReason, CurrentIllness, Diagnostic, FamilyBackground, FunctionalExam, MedicalOrder, PatientHistory, PersonalBackground, PersonalData, PhysicalExam, PsychobiologicalHabits, AditionalInfo, Control } from './model/patient-history.entity';
+import { ConsultationReason, CurrentIllness, Diagnostic, FunctionalExam, MedicalOrder, PatientHistory, PersonalData, PhysicalExam, PatientAnamnese, AditionalInfo, Control, PatientDocument } from './model/patient-history.entity';
 import { getRepository} from 'fireorm';
 import { InjectRepository } from 'nestjs-fireorm';
 import { publish } from 'ett-events-lib';
@@ -52,14 +52,13 @@ export class PatientHistoryService {
   }
 
   public async savePatientHistory(user: string, commerceId: string, clientId: string, type: PatientHistoryType, personalData: PersonalData,
-    consultationReason: ConsultationReason, currentIllness: CurrentIllness, personalBackground: PersonalBackground,
-    familyBackground: FamilyBackground, psychobiologicalHabits: PsychobiologicalHabits, functionalExam: FunctionalExam,
-    physicalExam: PhysicalExam, diagnostic: Diagnostic, medicalOrder: MedicalOrder, control: Control, aditionalInfo: AditionalInfo, active: boolean, available: boolean, lastAttentionId: string): Promise<PatientHistory> {
+    consultationReason: ConsultationReason, currentIllness: CurrentIllness, patientAnamnese: PatientAnamnese, functionalExam: FunctionalExam,
+    physicalExam: PhysicalExam, diagnostic: Diagnostic, medicalOrder: MedicalOrder, control: Control, aditionalInfo: AditionalInfo, active: boolean,
+    available: boolean, lastAttentionId: string, patientDocument: PatientDocument): Promise<PatientHistory> {
     let patientHistory = await this.getPatientHistorysByClientId(commerceId, clientId);
     if (patientHistory && patientHistory.id) {
-      patientHistory = await this.updatePatientHistoryConfigurations(user, patientHistory.id, personalData, consultationReason,
-        currentIllness, personalBackground, familyBackground, psychobiologicalHabits,
-        functionalExam, physicalExam, diagnostic, medicalOrder, control, aditionalInfo, active, available, lastAttentionId)
+      patientHistory = await this.updatePatientHistoryConfigurations(user, patientHistory.id, personalData, consultationReason, currentIllness,
+        patientAnamnese, functionalExam, physicalExam, diagnostic, medicalOrder, control, aditionalInfo, active, available, lastAttentionId, patientDocument);
     } else {
       if (personalData !== undefined) {
         personalData.createdBy = user;
@@ -73,17 +72,9 @@ export class PatientHistoryService {
         currentIllness.createdBy = user;
         currentIllness.createdAt = new Date();
       }
-      if (personalBackground !== undefined) {
-        personalBackground.createdBy = user;
-        personalBackground.createdAt = new Date();
-      }
-      if (familyBackground !== undefined) {
-        familyBackground.createdBy = user;
-        familyBackground.createdAt = new Date();
-      }
-      if (psychobiologicalHabits !== undefined) {
-        psychobiologicalHabits.createdBy = user;
-        psychobiologicalHabits.createdAt = new Date();
+      if (patientAnamnese !== undefined) {
+        patientAnamnese.createdBy = user;
+        patientAnamnese.createdAt = new Date();
       }
       if (functionalExam !== undefined) {
         functionalExam.createdBy = user;
@@ -101,21 +92,24 @@ export class PatientHistoryService {
         medicalOrder.createdBy = user;
         medicalOrder.createdAt = new Date();
       }
+      if (patientDocument !== undefined) {
+        patientDocument.createdBy = user;
+        patientDocument.createdAt = new Date();
+      }
       if (control !== undefined) {
         control.createdBy = user;
         control.createdAt = new Date();
       }
-      patientHistory = await this.createPatientHistory(user, commerceId, clientId, type, personalData, [consultationReason], [currentIllness], [personalBackground],
-        [familyBackground], psychobiologicalHabits, [functionalExam], [physicalExam], [diagnostic], [medicalOrder], [control], aditionalInfo, lastAttentionId);
+      patientHistory = await this.createPatientHistory(user, commerceId, clientId, type, personalData, [consultationReason], [currentIllness],
+        patientAnamnese, [functionalExam], [physicalExam], [diagnostic], [medicalOrder], [control], aditionalInfo, lastAttentionId, [patientDocument]);
     }
     return patientHistory;
   }
 
   public async createPatientHistory(user: string, commerceId: string, clientId: string, type: PatientHistoryType, personalData: PersonalData,
-    consultationReason: ConsultationReason[], currentIllness: CurrentIllness[], personalBackground: PersonalBackground[],
-    familyBackground: FamilyBackground[], psychobiologicalHabits : PsychobiologicalHabits, functionalExam: FunctionalExam[],
+    consultationReason: ConsultationReason[], currentIllness: CurrentIllness[], patientAnamnese : PatientAnamnese, functionalExam: FunctionalExam[],
     physicalExam: PhysicalExam[], diagnostic: Diagnostic[], medicalOrder: MedicalOrder[], control: Control[], aditionalInfo: AditionalInfo,
-    lastAttentionId: string): Promise<PatientHistory> {
+    lastAttentionId: string, patientDocument: PatientDocument[]): Promise<PatientHistory> {
     let patientHistory = new PatientHistory();
     patientHistory.commerceId = commerceId;
     patientHistory.clientId = clientId;
@@ -123,9 +117,7 @@ export class PatientHistoryService {
     patientHistory.personalData = personalData;
     patientHistory.consultationReason = consultationReason;
     patientHistory.currentIllness = currentIllness;
-    patientHistory.personalBackground = personalBackground;
-    patientHistory.familyBackground = familyBackground;
-    patientHistory.psychobiologicalHabits = psychobiologicalHabits;
+    patientHistory.patientAnamnese = patientAnamnese;
     patientHistory.functionalExam = functionalExam;
     patientHistory.physicalExam = physicalExam;
     patientHistory.diagnostic = diagnostic;
@@ -133,10 +125,13 @@ export class PatientHistoryService {
     patientHistory.control = control;
     patientHistory.aditionalInfo = aditionalInfo;
     patientHistory.lastAttentionId = lastAttentionId;
+    patientHistory.patientDocument = patientDocument;
     patientHistory.active = true;
     patientHistory.available = true;
     patientHistory.createdAt = new Date();
     patientHistory.createdBy = user;
+    patientHistory.modifiedAt = new Date();
+    patientHistory.modifiedBy = user;
     const patientHistoryCreated = await this.patientHistoryRepository.create(patientHistory);
     const patientHistoryCreatedEvent = new PatientHistoryCreated(new Date(), patientHistoryCreated, { user });
     publish(patientHistoryCreatedEvent);
@@ -144,10 +139,9 @@ export class PatientHistoryService {
   }
 
   public async updatePatientHistoryConfigurations(user: string, id: string, personalData: PersonalData,
-    consultationReason: ConsultationReason, currentIllness: CurrentIllness, personalBackground: PersonalBackground,
-    familyBackground: FamilyBackground, psychobiologicalHabits: PsychobiologicalHabits, functionalExam: FunctionalExam,
+    consultationReason: ConsultationReason, currentIllness: CurrentIllness, patientAnamnese: PatientAnamnese, functionalExam: FunctionalExam,
     physicalExam: PhysicalExam, diagnostic: Diagnostic, medicalOrder: MedicalOrder, control: Control, aditionalInfo: AditionalInfo,
-    active: boolean, available: boolean, lastAttentionId: string): Promise<PatientHistory> {
+    active: boolean, available: boolean, lastAttentionId: string, patientDocument: PatientDocument): Promise<PatientHistory> {
     try {
       let patientHistory = await this.patientHistoryRepository.findById(id);
       if (personalData !== undefined) {
@@ -211,69 +205,13 @@ export class PatientHistoryService {
           }
         }
       }
-      if (personalBackground !== undefined &&
-        personalBackground.background !== undefined &&
-        personalBackground.background.length > 0) {
+      if (patientAnamnese !== undefined) {
+        patientAnamnese.modifiedBy = user;
+        patientAnamnese.modifiedAt = new Date();
         if (lastAttentionId !== undefined) {
-          personalBackground.attentionId = lastAttentionId;
+          patientAnamnese.attentionId = lastAttentionId;
         }
-        if (patientHistory.personalBackground && patientHistory.personalBackground.length > 0) {
-          const todayResults = patientHistory.personalBackground.filter(exam => getDateFormatted(exam.createdAt) === getDateFormatted(new Date()));
-          if (todayResults && todayResults.length === 1) {
-            const todayResult = todayResults[0];
-            const newResult = { ...todayResult, ...personalBackground };
-            const resultsAux = patientHistory.personalBackground.filter(exam => getDateFormatted(exam.createdAt) !== getDateFormatted(new Date()));
-            patientHistory.personalBackground = [...resultsAux, newResult];
-          } else if (!todayResults || todayResults.length === 0) {
-            personalBackground.createdBy = user;
-            personalBackground.createdAt = new Date();
-            patientHistory.personalBackground = [...patientHistory.personalBackground, personalBackground];
-          }
-        } else {
-          personalBackground.createdBy = user;
-          personalBackground.createdAt = new Date();
-          if (patientHistory.personalBackground) {
-            patientHistory.personalBackground = [...patientHistory.personalBackground, personalBackground];
-          } else {
-            patientHistory.personalBackground = [personalBackground];
-          }
-        }
-      }
-      if (familyBackground !== undefined &&
-        familyBackground.background !== undefined &&
-        familyBackground.background.length > 0) {
-        if (lastAttentionId !== undefined) {
-          familyBackground.attentionId = lastAttentionId;
-        }
-        if (patientHistory.familyBackground && patientHistory.familyBackground.length > 0) {
-          const todayResults = patientHistory.familyBackground.filter(exam => getDateFormatted(exam.createdAt) === getDateFormatted(new Date()));
-          if (todayResults && todayResults.length === 1) {
-            const todayResult = todayResults[0];
-            const newResult = { ...todayResult, ...familyBackground };
-            const resultsAux = patientHistory.familyBackground.filter(exam => getDateFormatted(exam.createdAt) !== getDateFormatted(new Date()));
-            patientHistory.familyBackground = [...resultsAux, newResult];
-          } else if (!todayResults || todayResults.length === 0) {
-            familyBackground.createdBy = user;
-            familyBackground.createdAt = new Date();
-            patientHistory.familyBackground = [...patientHistory.familyBackground, familyBackground];
-          }
-        } else {
-          familyBackground.createdBy = user;
-          familyBackground.createdAt = new Date();
-          if (patientHistory.familyBackground) {
-            patientHistory.familyBackground = [...patientHistory.familyBackground, familyBackground];
-          } else {
-            patientHistory.familyBackground = [familyBackground];
-          }
-        }
-      }
-      if (psychobiologicalHabits !== undefined) {
-        psychobiologicalHabits.modifiedBy = user;
-        psychobiologicalHabits.modifiedAt = new Date();
-        if (lastAttentionId !== undefined) {
-          psychobiologicalHabits.attentionId = lastAttentionId;
-        }
-        patientHistory.psychobiologicalHabits = { ...patientHistory.psychobiologicalHabits, ...psychobiologicalHabits };
+        patientHistory.patientAnamnese = { ...patientHistory.patientAnamnese, ...patientAnamnese };
       }
       if (functionalExam !== undefined &&
         functionalExam.exam !== undefined &&
@@ -296,8 +234,8 @@ export class PatientHistoryService {
         } else {
           functionalExam.createdBy = user;
           functionalExam.createdAt = new Date();
-          physicalExam.createdBy = user;
-          physicalExam.createdAt = new Date();
+          functionalExam.createdBy = user;
+          functionalExam.createdAt = new Date();
           if (patientHistory.functionalExam) {
             patientHistory.functionalExam = [...patientHistory.functionalExam, functionalExam];
           } else {
@@ -313,11 +251,11 @@ export class PatientHistoryService {
           physicalExam.attentionId = lastAttentionId;
         }
         if (patientHistory.physicalExam && patientHistory.physicalExam.length > 0) {
-          const todayResults = patientHistory.physicalExam.filter(exam => getDateFormatted(exam.createdAt) === getDateFormatted(new Date()));
+          const todayResults = patientHistory.physicalExam.filter(exam => getDateFormatted(exam.createdAt ? exam.createdAt : new Date()) === getDateFormatted(new Date()));
           if (todayResults && todayResults.length === 1) {
             const todayResult = todayResults[0];
             const newResult = { ...todayResult, ...physicalExam };
-            const resultsAux = patientHistory.physicalExam.filter(exam => getDateFormatted(exam.createdAt) !== getDateFormatted(new Date()));
+            const resultsAux = patientHistory.physicalExam.filter(exam => getDateFormatted(exam.createdAt ? exam.createdAt : new Date()) !== getDateFormatted(new Date()));
             patientHistory.physicalExam = [...resultsAux, newResult];
           } else if (!todayResults || todayResults.length === 0) {
             physicalExam.createdBy = user;
@@ -419,6 +357,18 @@ export class PatientHistoryService {
           }
         }
       }
+      if (patientDocument !== undefined) {
+        if (lastAttentionId !== undefined) {
+          patientDocument.attentionId = lastAttentionId;
+        }
+        patientDocument.createdBy = user;
+        patientDocument.createdAt = new Date();
+        if (patientHistory.patientDocument) {
+          patientHistory.patientDocument = [...patientHistory.patientDocument, patientDocument];
+        } else {
+          patientHistory.patientDocument = [patientDocument];
+        }
+      }
       if (aditionalInfo !== undefined) {
         aditionalInfo.modifiedBy = user;
         aditionalInfo.modifiedAt = new Date();
@@ -444,12 +394,15 @@ export class PatientHistoryService {
     }
   }
 
-  public async updatePatientHistoryControl(user: string, id: string, control: Control[], lastAttentionId: string): Promise<PatientHistory> {
+  public async updatePatientHistoryControl(user: string, id: string, control: Control[], patientDocument: PatientDocument[], lastAttentionId: string): Promise<PatientHistory> {
     try {
       let patientHistory = await this.patientHistoryRepository.findById(id);
       if (patientHistory && patientHistory.id) {
         if (control !== undefined) {
           patientHistory.control = control;
+        }
+        if (patientDocument !== undefined) {
+          patientHistory.patientDocument = patientDocument;
         }
         if (lastAttentionId !== undefined) {
           patientHistory.lastAttentionId = lastAttentionId;

@@ -12,6 +12,7 @@ export class PersonalInfo {
     code1: string;
     code2: string;
     code3: string;
+    healthAgreementId: string;
 }
 
 @Collection('client')
@@ -37,4 +38,6 @@ export class Client {
     contactResultCollaboratorId?: string;
     counter: number;
     clientContacts?: ClientContact[];
+    firstAttentionForm?: boolean;
+    conditionsAccepted?: boolean;
 }
